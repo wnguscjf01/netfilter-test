@@ -107,7 +107,7 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 			host_addr += 6;
 			
 			if(strncmp(host_addr, susp, strlen(susp))==0){
-				printf("suspicious url blocked!\n");
+				printf("suspicious site blocked!\n");
 				return nfq_set_verdict(qh, id, NF_DROP, 0, NULL);
 			}
 		}
