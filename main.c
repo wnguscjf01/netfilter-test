@@ -78,7 +78,7 @@ static uint32_t print_pkt (struct nfq_data *tb)
 
 	ret = nfq_get_payload(tb, &data);
 	if (ret >= 0){
-		dump(data,ret);
+		//dump(data,ret);
 		printf("payload_len=%d ", ret);
 	}
 
@@ -94,18 +94,25 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 	uint32_t id = print_pkt(nfa);
 	printf("entering callback\n");
 	unsigned char *payl;
-	int size = nfq_get_payload(nfa,payl);
+	int size = nfq_get_payload(nfa,&payl);
 	if(size>=0){
 		struct libnet_ipv4_hdr *ip_hdr = (struct libnet_ipv4_hdr *)payl;
 		if(ip_hdr->ip_p != IPPROTO_TCP) return nfq_set_verdict(qh, id, NF_ACCEPT, 0, NULL);
+		dump(payl,size);
 		struct libnet_tcp_hdr *tcp_hdr = (struct libnet_tcp_hdr *)(payl+4*(ip_hdr->ip_hl));
-		printf("done\n");
 		const char *host_addr = strstr(payl+4*(ip_hdr->ip_hl<<2)+4*(tcp_hdr->th_off),"Host: ");
 		if(host_addr){
+			printf("%s\n",host_addr);
+			printf("%s\n",susp);
 			host_addr += 6;
-			if(strncmp(host_addr, susp, strlen(susp))==0) return nfq_set_verdict(qh, id, NF_DROP, 0, NULL);
+			
+			if(strncmp(host_addr, susp, strlen(susp))==0){
+				printf("suspicious url blocked!\n");
+				return nfq_set_verdict(qh, id, NF_DROP, 0, NULL);
+			}
 		}
 	}
+	printf("accepted\n");
 	return nfq_set_verdict(qh, id, NF_ACCEPT, 0, NULL);
 }
 
@@ -123,7 +130,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	strcpy(susp,argv[1]);
-
+	printf("%s\n",susp);
 	printf("opening library handle\n");
 	h = nfq_open();
 	if (!h) {
